@@ -15,7 +15,7 @@ get_auc <- function(data_name, fold=NA){
     ROCR::performance(pred, "auc")@y.values[[1]]
   }
 
-  report$auc$val[names(get_set(data_path))] <<- if(!is.na(fold)){
+  report$auc$val[names(get_set(data_name))] <<- if(!is.na(fold)){
     sapply(split(data, data[[fold]]), calc)
   }else{
     calc(data)
