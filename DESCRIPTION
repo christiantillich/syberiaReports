@@ -1,7 +1,7 @@
 Package: syberiaReports
 Type: Package
 Title: Report Generation for Syberia
-Version: 0.1.0
+Version: 0.1.1
 Authors@R: person("Christian", "Tillich", email = "christian.tillich.walker@gmail.com", role = c("aut", "cre"))
 Description: A little no-frills report generator. Specify a list of functions
     for your report, get all the outputs written out as an S3 object.
