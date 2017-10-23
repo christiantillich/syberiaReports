@@ -14,13 +14,15 @@ build_report <- function(report_path){
 
   #Fetch the report list
   report_list <<- source(report_path)$value
-
+  
+  
   #Bring in the Syberia model
   model <<- s3read(report_list$model)
 
   #Create the report object and append the basics
   cat('Initializing Report\n')
   report <<- list()
+  report$location <<- report_list$save
   report$model <<- model$output$model
   report$raw_data <<- report_list$raw_data
 
@@ -37,8 +39,6 @@ build_report <- function(report_path){
   dummy <- report_list$report %>% lapply(report_on)
 
   #Save the report
-
-  report$location <<- report_list$save
   cat(paste('Writing out report to', report_list$save,'\n'))
   s3store(report, report_list$save)
 }
@@ -52,22 +52,31 @@ score_data <- function(data_name){
 
   #Read the data
   data <- s3read(report_list$scored_data[[data_name]][[1]])
-
+  options <- unlist(report_list$scored_data[[data_name]][-1], recursive=F)
+  
+  
   #' GLMNet handles 's' weird. You need to assign predict_method to model$input.
   #' You can't just pass it as an optional parameter to predict. So, if it exists
   #' we gotta handle it special.
-  report_list$scored_data[[data_name]][[2]]$predict_method %>%
-    {if(!is.null(.)) model$input$predict_method <- .}
+  if(!is.null(options$predict_method)){
+     model$input$predict_method <- options$predict_method
+  }
+  if(is.null(options$filters)){
+    options$filters <- list('TRUE')
+  }
 
   #Create the score from the list options
-  data$score <- model$predict(data, report_list$scored_data[[data_name]][[-1]])
+  data$score <- model$predict(data, options)
 
   #Join the score with the post-munged data.
-  out <- data[,c(model$input$id_var,'score','dep_var')] %>%
-    merge(model$munge(data) %>% {.[,!(colnames(.) %in% 'dep_var')]},by=model$input$id_var)
-  #' This is a bit obtuse, but some model muging produces a trivial, NA-filled
+  id_name <- model$input[c('id_type','id_var')] %>% unlist %>% unique %>% .[1]
+  out <- data %>%
+    {do.call(function(x, ...) filter_(., ...), options$filters)} %>%
+    .[,c(id_name,'score','dep_var')] %>%
+    merge(model$munge(data) %>% {.[,!(colnames(.) %in% 'dep_var')]},by=id_name)
+  #' This is a bit obtuse, but some model munging produces a trivial, NA-filled
   #' dep_var, so this just kicks it out
-
+  
   #Write
   path <- paste0(report_list$save, '/', data_name)
   s3store(out, path)
