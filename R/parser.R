@@ -22,7 +22,8 @@ build_report <- function(report_path){
   #Create the report object and append the basics
   cat('Initializing Report\n')
   report <<- list()
-  report$location <<- report_list$save
+  report$location$report <<- report_list$save
+  report$location$model <<- report_list$model
   report$model <<- model$output$model
   report$raw_data <<- report_list$raw_data
 
@@ -106,7 +107,7 @@ get_set <- function(name, list="scored_data"){
 #' @return Returns the s3 path to the plot
 #' @export
 store_plot <- function(plot_obj,name,opts=list()){
-  s3_plot(paste0(report_list$model,'/',name), plot(plot_obj),opts)
+  s3_plot(paste0(report$location$report,'/',name), plot(plot_obj),opts)
 }
 
 #' Add something to your report.
@@ -123,11 +124,12 @@ append_report <- function(report_path, func_list){
 
   #Read in report
   report <<- s3read(report_path)
+  model <<- s3read(report$location$model)
 
   #Evaluate each of the reporting functions.
   report_on <- function(element) do.call(element[[1]], element[-1])
   lapply(func_list, report_on)
 
   #Write out
-  s3store(report, report$location)
+  s3store(report, report$location$report)
 }
