@@ -52,9 +52,10 @@ build_report <- function(report_path){
 score_data <- function(data_name){
 
   #Read the data
-  data <- s3read(report_list$scored_data[[data_name]][[1]])
   options <- unlist(report_list$scored_data[[data_name]][-1], recursive=F)
-  
+  if(is.null(options$filters)){options$filters <- list('TRUE')}
+  data <- s3read(report_list$scored_data[[data_name]][[1]]) %>%
+    {do.call(function(x, ...) filter_(., ...), options$filters)}
   
   #' GLMNet handles 's' weird. You need to assign predict_method to model$input.
   #' You can't just pass it as an optional parameter to predict. So, if it exists
@@ -62,17 +63,13 @@ score_data <- function(data_name){
   if(!is.null(options$predict_method)){
      model$input$predict_method <- options$predict_method
   }
-  if(is.null(options$filters)){
-    options$filters <- list('TRUE')
-  }
 
   #Create the score from the list options
   data$score <- model$predict(data, options)
 
-  #Join the score with the post-munged data.
+  #Join the data to the post-munged variable set. 
   id_name <- model$input[c('id_type','id_var')] %>% unlist %>% unique %>% .[1]
   out <- data %>%
-    {do.call(function(x, ...) filter_(., ...), options$filters)} %>%
     .[,c(id_name,'score','dep_var')] %>%
     merge(model$munge(data) %>% {.[,!(colnames(.) %in% 'dep_var')]},by=id_name)
   #' This is a bit obtuse, but some model munging produces a trivial, NA-filled
@@ -133,3 +130,5 @@ append_report <- function(report_path, func_list){
   #Write out
   s3store(report, report$location$report)
 }
+
+
