@@ -4,7 +4,7 @@
 \alias{get_aucs}
 \title{Calculate AUCs for all scored sets.}
 \usage{
-get_aucs(data_names, folds = NA)
+get_aucs(data_names, folds = NA, location = "auc$val")
 }
 \arguments{
 \item{folds}{An optional vector of the names of fold columns. Defaults to NA,

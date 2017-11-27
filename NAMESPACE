@@ -3,7 +3,6 @@
 export(add_metadata_glmnet)
 export(append_report)
 export(build_report)
-export(get_auc)
 export(get_aucs)
 export(get_coef_glmnet)
 export(get_set)

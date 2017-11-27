@@ -12,24 +12,21 @@
 #' @examples build_report('path/to/my/file.R')
 build_report <- function(report_path){
 
-  #Fetch the report list
-  report_list <<- source(report_path)$value
-  
-  
-  #Bring in the Syberia model
-  model <<- s3read(report_list$model)
+  #Create the report environment and object and append the basics
+  make_report_env()
+  .ReportEnv$report_list <- source(report_path)$value
+  .ReportEnv$model <- s3read(report_list()$model)
 
-  #Create the report object and append the basics
+  #Build out the core report properties
   cat('Initializing Report\n')
-  report <<- list()
-  report$location$report <<- report_list$save
-  report$location$model <<- report_list$model
-  report$model <<- model$output$model
-  report$raw_data <<- report_list$raw_data
+  add_element(report_list()$save, 'location$report')
+  add_element(report_list()$model, 'location$model')
+  add_element(model()$output$model, 'model')
+  add_element(report_list()$raw_data, 'raw_data')
 
   #Score all the listed data sets.
   cat('Scoring the data sets\n')
-  report$scored_data <<- sapply(names(report_list$scored_data), score_data)
+  sapply(names(report_list()$scored_data), score_data) %>% add_element('scored_data')
 
   #Evaluate each of the reporting functions.
   cat('Running reporting functions\n')
@@ -37,11 +34,11 @@ build_report <- function(report_path){
     cat(names(element))
     do.call(element[[1]], element[-1])
   }
-  dummy <- report_list$report %>% lapply(report_on)
+  dummy <- report_list()$report %>% lapply(report_on)
 
   #Save the report
-  cat(paste('Writing out report to', report_list$save,'\n'))
-  s3store(report, report_list$save)
+  cat(paste('Writing out report to', report_list()$save,'\n'))
+  s3store(report(), report_list()$save)
 }
 
 
@@ -52,31 +49,31 @@ build_report <- function(report_path){
 score_data <- function(data_name){
 
   #Read the data
-  options <- unlist(report_list$scored_data[[data_name]][-1], recursive=F)
+  options <- unlist(report_list()$scored_data[[data_name]][-1], recursive=F)
   if(is.null(options$filters)){options$filters <- list('TRUE')}
-  data <- s3read(report_list$scored_data[[data_name]][[1]]) %>%
+  data <- s3read(report_list()$scored_data[[data_name]][[1]]) %>%
     {do.call(function(x, ...) filter_(., ...), options$filters)}
   
   #' GLMNet handles 's' weird. You need to assign predict_method to model$input.
   #' You can't just pass it as an optional parameter to predict. So, if it exists
   #' we gotta handle it special.
   if(!is.null(options$predict_method)){
-     model$input$predict_method <- options$predict_method
+    model()$input$predict_method <- options$predict_method
   }
 
   #Create the score from the list options
-  data$score <- model$predict(data, options)
+  data$score <- model()$predict(data, options)
 
   #Join the data to the post-munged variable set. 
-  id_name <- model$input[c('id_type','id_var')] %>% unlist %>% unique %>% .[1]
+  id_name <- model()$input[c('id_type','id_var')] %>% unlist %>% unique %>% .[1]
   out <- data %>%
     .[,c(id_name,'score','dep_var')] %>%
-    merge(model$munge(data) %>% {.[,!(colnames(.) %in% 'dep_var')]},by=id_name)
+    merge(model()$munge(data) %>% {.[,!(colnames(.) %in% 'dep_var')]},by=id_name)
   #' This is a bit obtuse, but some model munging produces a trivial, NA-filled
   #' dep_var, so this just kicks it out
   
   #Write
-  path <- paste0(report_list$save, '/', data_name)
+  path <- paste0(report_list()$save, '/', data_name)
   s3store(out, path)
 
   #Return the path
@@ -92,7 +89,7 @@ score_data <- function(data_name){
 #' @return The s3link to the data set.
 #' @export
 get_set <- function(name, list="scored_data"){
-  sapply(name, function(x) report[[list]][[x]][[1]])
+  sapply(name, function(x) report()[[list]][[x]][[1]])
 }
 
 #' Write out a plot to s3
@@ -104,7 +101,7 @@ get_set <- function(name, list="scored_data"){
 #' @return Returns the s3 path to the plot
 #' @export
 store_plot <- function(plot_obj,name,opts=list()){
-  s3_plot(paste0(report$location$report,'/',name), plot(plot_obj),opts)
+  s3_plot(paste0(report()$location$report,'/',name), plot(plot_obj),opts)
 }
 
 #' Add something to your report.
@@ -120,15 +117,34 @@ store_plot <- function(plot_obj,name,opts=list()){
 append_report <- function(report_path, func_list){
 
   #Read in report
-  report <<- s3read(report_path)
-  model <<- s3read(report$location$model)
+  make_report_env()
+  .ReportEnv$report <- s3read(report_path)
+  .ReportEnv$model <- s3read(report()$location$model)
 
   #Evaluate each of the reporting functions.
   report_on <- function(element) do.call(element[[1]], element[-1])
   lapply(func_list, report_on)
 
   #Write out
-  s3store(report, report$location$report)
+  s3store(report(), report()$location$report)
 }
 
 
+add_element <- function(item, location){
+  .ReportEnv$temp <- item
+  eval(parse(text=paste0('report$',location,' <- temp')) ,envir=.ReportEnv)
+}
+
+get_element <- function(location){
+  eval(parse(text=paste0('report$',location)) ,envir=.ReportEnv)
+}
+
+
+make_report_env <- function(){
+  assign('.ReportEnv', new.env(), .GlobalEnv)
+  attach(.ReportEnv)
+  assign('report', list(), .ReportEnv)
+}
+report <- function(){.ReportEnv$report}
+report_list <- function(){.ReportEnv$report_list}
+model <- function(){.ReportEnv$model}

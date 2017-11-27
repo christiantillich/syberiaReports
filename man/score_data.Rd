@@ -14,7 +14,7 @@ report$scored_data
 GLMNet handles 's' weird. You need to assign predict_method to model$input.
 You can't just pass it as an optional parameter to predict. So, if it exists
 we gotta handle it special.
-This is a bit obtuse, but some model muging produces a trivial, NA-filled
+This is a bit obtuse, but some model munging produces a trivial, NA-filled
 dep_var, so this just kicks it out
 }
 \description{
