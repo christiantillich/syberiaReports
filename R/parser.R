@@ -61,26 +61,21 @@ score_data <- function(data_name){
     model()$input$predict_method <- options$predict_method
   }
 
+  #' GLMNet also handles the id column weirdly. XGB saves it as id_var but GLMNet
+  #' as id_type. 
+  if(class(model()$output$model) %in% c('glmnet','cv.glmnet')){
+    id_name <- model()$input[['id_type']]
+  }else{
+    id_name <- model()$input[['id_var']]
+  }
+  
   #Compose the data set. 
-  id_name <- model()$input[c('id_type','id_var')] %>% unlist %>% unique %>% .[1]
   post_munged <- model()$munge(data) %>% {.[,!(colnames(.) %in% 'dep_var')]}
   data$score <- model()$predict(data, options)
   #' This is a bit obtuse, but some model munging produces a trivial, NA-filled
   #' dep_var, so this just kicks it out
 
   out <- left_join(data[,c(id_name, 'dep_var','score')], post_munged)
-  
-  # #Create the score from the list options
-  # data$score <- model()$predict(data, options)
-  # 
-  # #Join the data to the post-munged variable set. 
-  # id_name <- model()$input[c('id_type','id_var')] %>% unlist %>% unique %>% .[1]
-  # out <- data %>%
-  #   .[,c(id_name,'score','dep_var')] %>%
-  #   merge(model()$munge(data) %>% {.[,!(colnames(.) %in% 'dep_var')]},by=id_name)
-  #'  The problem's here, consider just rewriting it all to make the munged data
-  #'  explicit instead of doing this as one big ugly pipe. 
-
   
   #Write
   path <- paste0(report_list()$save, '/', data_name)
