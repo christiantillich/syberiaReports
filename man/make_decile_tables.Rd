@@ -4,17 +4,21 @@
 \alias{make_decile_tables}
 \title{Adds decile info to report.}
 \usage{
-make_decile_tables(scored_sets, xcol = "score")
+make_decile_tables(scored_sets, xcol = "score", ycol = "dep_var",
+  location = "performance")
 }
 \arguments{
 \item{scored_sets}{The names of the scored data sets.}
 
-\item{xcol}{Which column to rank by decile. Defaults to score, but could be
-used for other rank-orderings.}
+\item{xcol}{Which column to use as an expected score, ranked by decile. 
+Defaults to 'score', but could be used for other rank-orderings.}
+
+\item{ycol}{Which column to use as the actual measure. Defaults to 'dep_var',
+but could be used on custom measures.}
 }
 \value{
-report$performance$`colname_decile_table` and
-report$performance$`colname_decile_plot`
+A plot to show expected vs. actual by score, and the tables used to
+create that plot.
 }
 \description{
 Create a dataframe with set name, x column decile, and expected
