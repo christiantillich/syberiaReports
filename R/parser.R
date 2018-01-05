@@ -10,19 +10,59 @@
 #' after execution, even if a particular function fails.
 #' @export
 #' @examples build_report('path/to/my/file.R')
-build_report <- function(report_path){
-
+build_report <- function(report_path, .disable_tests=TRUE){
+  #Messages
+  library_error <- paste(
+    "Please specify a location for all syberiaReports functions via either the"
+    ,"library attribute of your report list, or"
+    ,"options('syberiaReports.library')"
+  )
+  test_error <- paste(
+    "Please specify a location for all syberiaReports functions via either the"
+    ,"test attribute of your report list, or"
+    ,"options('syberiaReports.test')"
+  )
+  
   #Create the report environment and object and append the basics
   make_report_env()
   .ReportEnv$report_list <- source(report_path)$value
   .ReportEnv$model <- s3read(report_list()$model)
 
+  #Import report function libraries, import the testing functions, and then run.
+  c(report_list()$library, options('syberiaReports.library')) %>% 
+    unlist %>% .[[1]] %>%
+    {if(is.null(.)){stop(library_error)}else{.}} %>%
+    list.files(full.names=TRUE) %>% 
+    sapply(function(x) source(x, local = report_library()))
+  
+  c(report_list()$tests, options('syberiaReports.tests')) %>% 
+    unlist %>% .[[1]] %>%
+    {if(is.null(.)){stop(test_error)}else{.}} %>%
+    list.files(full.names=TRUE) %>% 
+    sapply(function(x) source(x, local = report_tests()))
+  
+  if(.disable_tests == TRUE){
+    cat("Checks disabled. Skipping. But make sure this is what you want to do.\n")
+  }else{
+    cat("Running through report tests. This will only take a moment.")
+    report_tests() %>% as.list %>% lapply(function(x) x())
+    
+    if(length(setdiff(ls(report_library()),ls(report_tests()))) > 0){
+      warning("The following reporting functions don't have tests:", immediate = TRUE)
+      setdiff(ls(report_library()),ls(report_tests())) %>% cat
+    }
+  }
+  
+  
   #Build out the core report properties
   cat('Initializing Report\n')
   add_element(report_list()$save, 'location$report')
   add_element(report_list()$model, 'location$model')
   add_element(model()$output$model, 'model')
   add_element(report_list()$raw_data, 'raw_data')
+  add_element(report_library(), '.env$library')
+  add_element(report_tests(), '.env$tests')
+  add_element(report_list(), '.env$list')
 
   #Score all the listed data sets.
   cat('Scoring the data sets\n')
@@ -61,13 +101,11 @@ score_data <- function(data_name){
     model()$input$predict_method <- options$predict_method
   }
 
-  #' GLMNet also handles the id column weirdly. XGB saves it as id_var but GLMNet
-  #' as id_type. 
-  if(class(model()$output$model) %in% c('glmnet','cv.glmnet')){
-    id_name <- model()$input[['id_type']]
-  }else{
-    id_name <- model()$input[['id_var']]
-  }
+  #' Okay, so I think what's going on is that when tundra containers create a 
+  #' special id column they assign it to id_type, not over-assign id_var. So when
+  #' custom fields exist we use id_type and when the defaults are used we use id
+  #' var. So we choose from id_type where it exists and if not, id_var. 
+  id_name <- model()$input[c('id_type','id_var')] %>% unlist %>% unique %>% .[1]
   
   #Compose the data set. 
   post_munged <- model()$munge(data) %>% {.[,!(colnames(.) %in% 'dep_var')]}
@@ -149,7 +187,12 @@ make_report_env <- function(){
   assign('.ReportEnv', new.env(), .GlobalEnv)
   attach(.ReportEnv)
   assign('report', list(), .ReportEnv)
+  assign('report_library', new.env(), .ReportEnv)
+  assign('report_tests', new.env(), .ReportEnv)
 }
 report <- function(){.ReportEnv$report}
 report_list <- function(){.ReportEnv$report_list}
 model <- function(){.ReportEnv$model}
+report_library <- function(){.ReportEnv$report_library}
+report_tests <- function(){.ReportEnv$report_tests}
+
