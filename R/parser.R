@@ -125,7 +125,7 @@ score_data <- function(data_name){
 
 
 #' Get the s3 link to a set by using the report_list name.
-#' @description
+#' @description Gets a data set from the report_list section you specify. 
 #' @param name The name of the data set.
 #' @param list Optional param to specify whether you want to use the scored data
 #' list or the raw data list. Defaults to scored data.
@@ -149,8 +149,8 @@ store_plot <- function(plot_obj,name,opts=list()){
 
 #' Add something to your report.
 #' @description Rather than rebuilding the report every time, append_report lets
-#' you add functions to an existing report. Good for testing new functions,
-#' troubleshooting, or ad hoc requests.
+#' you add functions to a report that already exists on s3. Good for testing new 
+#' functions, troubleshooting, or ad hoc requests.
 #' @param report_path The s3 path to the report.
 #' @param func_list List of functions to add, formatted exactly like your
 #' report list.
@@ -173,16 +173,34 @@ append_report <- function(report_path, func_list){
 }
 
 
+#' Assigns object to a report via a text path. 
+#' @description Takes the object, forms the string report$[[object_path]], and
+#' then assigns the object to that location in the report. E.g. 
+#' add_element(some_plot, 'plots$plot_a') will take the plot object and will 
+#' perform `report$plots$plot_a <- some_plot`
+#' @param item any. The object you'd like to store. Commonly dataframes, urls to
+#' images, etc, but could be anything. 
+#' @param location character. The location in the report you'd like the object 
+#' to be stored in, as a text string. 
+#' @export
 add_element <- function(item, location){
   .ReportEnv$temp <- item
   eval(parse(text=paste0('report$',location,' <- temp')) ,envir=.ReportEnv)
 }
 
+#' Retrieves object via a text path. 
+#' @description Works like add_element(), but retrieves the object at the 
+#' specified text path. 
+#' @param location character. The location in the report you'd like to retrieve
+#' an object from. 
+#' @export
 get_element <- function(location){
   eval(parse(text=paste0('report$',location)) ,envir=.ReportEnv)
 }
 
-
+#' Create new, blank .ReportEnv
+#' @description Cleans the slate and creates a new reporting environment. 
+#' @export
 make_report_env <- function(){
   assign('.ReportEnv', new.env(), .GlobalEnv)
   attach(.ReportEnv)
@@ -190,6 +208,9 @@ make_report_env <- function(){
   assign('report_library', new.env(), .ReportEnv)
   assign('report_tests', new.env(), .ReportEnv)
 }
+
+
+#Useful internal helper functions, don't document or export. 
 report <- function(){.ReportEnv$report}
 report_list <- function(){.ReportEnv$report_list}
 model <- function(){.ReportEnv$model}

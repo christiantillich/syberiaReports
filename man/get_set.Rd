@@ -15,4 +15,7 @@ list or the raw data list. Defaults to scored data.}
 \value{
 The s3link to the data set.
 }
+\description{
+Gets a data set from the report_list section you specify.
+}
 
