@@ -88,33 +88,34 @@ build_report <- function(report_path, .disable_tests=TRUE){
 #' @return report$scored_data
 score_data <- function(data_name){
 
-  #Read the data
+  #Set up the default options
   options <- unlist(report_list()$scored_data[[data_name]][-1], recursive=F)
   if(is.null(options$filters)){options$filters <- list('TRUE')}
-  data <- s3read(report_list()$scored_data[[data_name]][[1]]) %>%
-    {do.call(function(x, ...) filter_(., ...), options$filters)}
-  
-  #' GLMNet handles 's' weird. You need to assign predict_method to model$input.
-  #' You can't just pass it as an optional parameter to predict. So, if it exists
-  #' we gotta handle it special.
+  if(is.null(options$id_name)){
+    options$id_name <- model()$input[c('id_type','id_var')] %>% 
+      unlist %>% unique %>% .[1]
+  }
   if(!is.null(options$predict_method)){
     model()$input$predict_method <- options$predict_method
   }
-
-  #' Okay, so I think what's going on is that when tundra containers create a 
-  #' special id column they assign it to id_type, not over-assign id_var. So when
-  #' custom fields exist we use id_type and when the defaults are used we use id
-  #' var. So we choose from id_type where it exists and if not, id_var. 
-  id_name <- model()$input[c('id_type','id_var')] %>% unlist %>% unique %>% .[1]
+  if(is.null(options$dep_var_name)){options$dep_var_name <- 'dep_var'}
+  #' GLMNet handles 's' weird. You need to assign predict_method to model$input.
+  #' You can't just pass it as an optional parameter to predict. So, if it exists
+  #' we gotta handle it special.
   
+  #Read in the data
+  data <- s3read(report_list()$scored_data[[data_name]][[1]]) %>%
+    {do.call(function(x, ...) filter_(., ...), options$filters)}
+  if(is.null(data[[options$id_name]])){
+    stop(paste("The column",options$id_name,"doesn't exist. Please set id_name manually."))
+  }
+
   #Compose the data set. 
-  post_munged <- model()$munge(data) %>% {.[,!(colnames(.) %in% 'dep_var')]}
+  post_munged <- model()$munge(data) %>% {.[,!(colnames(.) %in% options$dep_var_name)]}
   data$score <- model()$predict(data, options)
-  #' This is a bit obtuse, but some model munging produces a trivial, NA-filled
-  #' dep_var, so this just kicks it out
+  out <- left_join(data[,c(options$id_name, options$dep_var_name,'score')], post_munged)
+  colnames(out)[colnames(out) == options$dep_var_name] <- 'dep_var'
 
-  out <- left_join(data[,c(id_name, 'dep_var','score')], post_munged)
-  
   #Write
   path <- paste0(report_list()$save, '/', data_name)
   s3store(out, path)
