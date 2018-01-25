@@ -26,7 +26,7 @@ build_report <- function(report_path, .disable_tests=TRUE){
   #Create the report environment and object and append the basics
   make_report_env()
   .ReportEnv$report_list <- source(report_path)$value
-  .ReportEnv$model <- s3read(report_list()$model)
+  .ReportEnv$model <- do.call(s3read, as.list(report_list()$model))
 
   #Import report function libraries, import the testing functions, and then run.
   c(report_list()$library, options('syberiaReports.library')) %>% 
@@ -163,7 +163,7 @@ append_report <- function(report_path, func_list){
   #Read in report
   make_report_env()
   .ReportEnv$report <- s3read(report_path)
-  .ReportEnv$model <- s3read(report()$location$model)
+  .ReportEnv$model <- do.call(s3read, as.list(report()$location$model))
 
   #Evaluate each of the reporting functions.
   report_on <- function(element) do.call(element[[1]], element[-1])
