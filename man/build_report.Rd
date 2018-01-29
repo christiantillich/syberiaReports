@@ -4,7 +4,7 @@
 \alias{build_report}
 \title{Build the report list.}
 \usage{
-build_report(report_path)
+build_report(report_path, .disable_tests = TRUE)
 }
 \arguments{
 \item{report_path}{The path to your report list.}

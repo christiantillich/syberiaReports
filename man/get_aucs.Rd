@@ -13,7 +13,7 @@ and will recycle. #'}
 \item{data_paths}{A vector of the scored set names}
 }
 \value{
-report$auc
+AUC measures for each data set.
 }
 \description{
 Just sapply get_auc across every scored_set.

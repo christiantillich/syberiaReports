@@ -18,7 +18,7 @@ assigned, so the new elements will be in memory.
 }
 \description{
 Rather than rebuilding the report every time, append_report lets
-you add functions to an existing report. Good for testing new functions,
-troubleshooting, or ad hoc requests.
+you add functions to a report that already exists on s3. Good for testing new 
+functions, troubleshooting, or ad hoc requests.
 }
 

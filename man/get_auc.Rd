@@ -13,7 +13,7 @@ get_auc(data_name, fold = NA)
 for calculating AUC on cross-validation sets.}
 }
 \value{
-report$auc$`set_name`
+Returns the auc for a given data set.
 }
 \description{
 Specify one of the scored data sets. get_auc will calculate the
