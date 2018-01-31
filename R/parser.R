@@ -10,7 +10,7 @@
 #' after execution, even if a particular function fails.
 #' @export
 #' @examples build_report('path/to/my/file.R')
-build_report <- function(report_path, .disable_tests=TRUE){
+build_report <- function(report_path, .disable_tests=FALSE){
   #Messages
   library_error <- paste(
     "Please specify a location for all syberiaReports functions via either the"
@@ -24,7 +24,7 @@ build_report <- function(report_path, .disable_tests=TRUE){
   )
   
   #Create the report environment and object and append the basics
-  make_report_env()
+  make_report_env(.disable_tests)
   .ReportEnv$report_list <- source(report_path)$value
   .ReportEnv$model <- do.call(s3read, as.list(report_list()$model))
 
@@ -161,7 +161,7 @@ store_plot <- function(plot_obj,name,opts=list()){
 append_report <- function(report_path, func_list){
 
   #Read in report
-  make_report_env()
+  make_report_env(.disable_tests=TRUE)
   .ReportEnv$report <- s3read(report_path)
   .ReportEnv$model <- do.call(s3read, as.list(report()$location$model))
 
@@ -201,13 +201,28 @@ get_element <- function(location){
 
 #' Create new, blank .ReportEnv
 #' @description Cleans the slate and creates a new reporting environment. 
+#' @param .disable_tests bool. Whether to run tests from syberiaReports.test
+#' directory. 
 #' @export
-make_report_env <- function(){
+make_report_env <- function(.disable_tests = FALSE){
   assign('.ReportEnv', new.env(), .GlobalEnv)
   attach(.ReportEnv)
   assign('report', list(), .ReportEnv)
+  
   assign('report_library', new.env(), .ReportEnv)
+  list.files(options()$syberiaReports.library, full.name=TRUE) %>% 
+    sapply(function(x) source(x, local=.ReportEnv$report_library))
+  attach(.ReportEnv$report_library, warn.conflicts=FALSE)
+  
   assign('report_tests', new.env(), .ReportEnv)
+  list.files(options()$syberiaReports.test, full.name=TRUE) %>% 
+    sapply(function(x) source(x, local=.ReportEnv$report_tests))
+  
+  if(!.disable_tests){
+    cat("Running Tests. Hold on to 'ya butts.")
+    check_coverage()
+    perform_tests()
+  }
 }
 
 

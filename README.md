@@ -5,7 +5,7 @@ To create a simple, Syberia-like package that turns a list of functions into a r
 
 # Usage
 
-The Syberia report list has five distinct stages
+The Syberia report list has six distinct stages.
 
 #### Model
 
@@ -23,9 +23,11 @@ A list of lists, where each list has the s3path to the original data set as the 
 
 This is the main section. A list of executable functions that adds various calculations/elements to your report. Could be functions to calculate AUCs, make histograms, diagnostic plots, etc. Whatever your report needs. 
 
+#### Save
 
+Where to write out the report in s3 when you are finished
 
-# Example. 
+# Example
 ```
 list(
    model = 's3path/to/your/model' #Let's say a glmnet model
@@ -56,3 +58,17 @@ list(
   ,save = 'path/to/my/saved/report'
 )
 ```
+
+# Internals
+
+## Environments and Saving. 
+
+A quick note on the inner-workings. The function `make_report_env` is responsible for establishing an environment named `.ReportEnv`, as well as several sub-environments. Everything relevant to the report is kept here, including the list that specifies how to construct the report, the individual functions, and the functions used for testing. Setting the options `syberiaReports.library` and `syberiaReports.tests` in your `.Rprofile` will determine where reporting functions and test functions are drawn from. 
+
+## Writing syberiaReports Functions. 
+
+`syberiaReports` functions have some special requirements. First, every function must contain a parameter called `location`. The parameter takes in a string that represents where in the report the output of the function will be stored. E.g. `location = 'scores$auc'` writes the output to `report$scores$auc`. The function that actually takes a location and writes the output to that location is `add_element`, and every function should append results to the report object using it (although I suppose you you can parse it all manually if you really want to). 
+
+## Writing syberiaReports Tests.
+
+`syberiaReports` tests also have some special requirements. First, they must be functions. Second, they must have the same name as the function they're testing. Third, errors must be raised via the `testthat::expect_` functions, otherwise error messages reported may not be helpful. 
