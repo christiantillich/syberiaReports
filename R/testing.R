@@ -1,11 +1,30 @@
+#' Check that all reporting functions have a non-trivial test. 
+#'
+#' @return NULL. Prints a message to the screen when functions are missing. 
+#' @export
 check_coverage <- function(){
-  .ReportEnv %>% 
-    {setdiff(names(.$report_library), names(.$report_tests))} %>%
+  functions <- options()$syberiaReports.library %>% 
+    list.files(pattern = "\\.R")
+  
+  tests <- options()$syberiaReports.test %>% 
+    list.files(pattern = "\\.R", full.name=TRUE) %>% 
+    file.info %>% 
+    .[.$size > 0,] %>%
+    rownames %>%
+    gsub('.+/','',.)
+  
+  setdiff(functions, tests) %>%
     paste(collapse = ", ") %>%
-    cat("Tests missing for the following functions: ", ., "\n")
+    {
+      if(length(.) > 0) cat("Tests missing for the following functions: ", ., "\n")
+    }
+    
 }
 
 
+#' Executes all tests in the test library. 
+#' @return NULL. Will print a series of warnings if functions fail tests. 
+#' @export
 perform_tests <- function(){
   error_func <- function(e){ 
     as.character(e) %>% 
@@ -16,5 +35,5 @@ perform_tests <- function(){
       warning(.,'\n')
   }
   errors <- .ReportEnv$report_tests %>% 
-    sapply(function(x) tryCatch(x(), error = error_func))
+    sapply(function(x) {tryCatch(x(), error = error_func)})
 }

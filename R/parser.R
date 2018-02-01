@@ -27,32 +27,6 @@ build_report <- function(report_path, .disable_tests=FALSE){
   make_report_env(.disable_tests)
   .ReportEnv$report_list <- source(report_path)$value
   .ReportEnv$model <- do.call(s3read, as.list(report_list()$model))
-
-  #Import report function libraries, import the testing functions, and then run.
-  c(report_list()$library, options('syberiaReports.library')) %>% 
-    unlist %>% .[[1]] %>%
-    {if(is.null(.)){stop(library_error)}else{.}} %>%
-    list.files(full.names=TRUE) %>% 
-    sapply(function(x) source(x, local = report_library()))
-  
-  c(report_list()$tests, options('syberiaReports.tests')) %>% 
-    unlist %>% .[[1]] %>%
-    {if(is.null(.)){stop(test_error)}else{.}} %>%
-    list.files(full.names=TRUE) %>% 
-    sapply(function(x) source(x, local = report_tests()))
-  
-  if(.disable_tests == TRUE){
-    cat("Checks disabled. Skipping. But make sure this is what you want to do.\n")
-  }else{
-    cat("Running through report tests. This will only take a moment.")
-    report_tests() %>% as.list %>% lapply(function(x) x())
-    
-    if(length(setdiff(ls(report_library()),ls(report_tests()))) > 0){
-      warning("The following reporting functions don't have tests:", immediate = TRUE)
-      setdiff(ls(report_library()),ls(report_tests())) %>% cat
-    }
-  }
-  
   
   #Build out the core report properties
   cat('Initializing Report\n')
@@ -206,20 +180,22 @@ get_element <- function(location){
 #' @export
 make_report_env <- function(.disable_tests = FALSE){
   assign('.ReportEnv', new.env(), .GlobalEnv)
-  attach(.ReportEnv)
+  if(!any(search() %in% ".ReportEnv")){attach(.ReportEnv)}
   assign('report', list(), .ReportEnv)
   
   assign('report_library', new.env(), .ReportEnv)
   list.files(options()$syberiaReports.library, full.name=TRUE) %>% 
+    grep("\\.R$", ., value=TRUE) %>% 
     sapply(function(x) source(x, local=.ReportEnv$report_library))
-  attach(.ReportEnv$report_library, warn.conflicts=FALSE)
+  if(!any(search() %in% ".ReportEnv$report_library")){attach(.ReportEnv$report_library)}
   
   assign('report_tests', new.env(), .ReportEnv)
   list.files(options()$syberiaReports.test, full.name=TRUE) %>% 
+    grep("\\.R$", ., value=TRUE) %>%
     sapply(function(x) source(x, local=.ReportEnv$report_tests))
   
   if(!.disable_tests){
-    cat("Running Tests. Hold on to 'ya butts.")
+    cat("Running Tests. Hold on to 'ya butts... \n")
     check_coverage()
     perform_tests()
   }
