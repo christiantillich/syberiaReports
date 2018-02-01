@@ -10,7 +10,7 @@
 #' after execution, even if a particular function fails.
 #' @export
 #' @examples build_report('path/to/my/file.R')
-build_report <- function(report_path, .disable_tests=TRUE){
+build_report <- function(report_path, .disable_tests=FALSE){
   #Messages
   library_error <- paste(
     "Please specify a location for all syberiaReports functions via either the"
@@ -24,35 +24,9 @@ build_report <- function(report_path, .disable_tests=TRUE){
   )
   
   #Create the report environment and object and append the basics
-  make_report_env()
+  make_report_env(.disable_tests)
   .ReportEnv$report_list <- source(report_path)$value
   .ReportEnv$model <- do.call(s3read, as.list(report_list()$model))
-
-  #Import report function libraries, import the testing functions, and then run.
-  c(report_list()$library, options('syberiaReports.library')) %>% 
-    unlist %>% .[[1]] %>%
-    {if(is.null(.)){stop(library_error)}else{.}} %>%
-    list.files(full.names=TRUE) %>% 
-    sapply(function(x) source(x, local = report_library()))
-  
-  c(report_list()$tests, options('syberiaReports.tests')) %>% 
-    unlist %>% .[[1]] %>%
-    {if(is.null(.)){stop(test_error)}else{.}} %>%
-    list.files(full.names=TRUE) %>% 
-    sapply(function(x) source(x, local = report_tests()))
-  
-  if(.disable_tests == TRUE){
-    cat("Checks disabled. Skipping. But make sure this is what you want to do.\n")
-  }else{
-    cat("Running through report tests. This will only take a moment.")
-    report_tests() %>% as.list %>% lapply(function(x) x())
-    
-    if(length(setdiff(ls(report_library()),ls(report_tests()))) > 0){
-      warning("The following reporting functions don't have tests:", immediate = TRUE)
-      setdiff(ls(report_library()),ls(report_tests())) %>% cat
-    }
-  }
-  
   
   #Build out the core report properties
   cat('Initializing Report\n')
@@ -161,7 +135,7 @@ store_plot <- function(plot_obj,name,opts=list()){
 append_report <- function(report_path, func_list){
 
   #Read in report
-  make_report_env()
+  make_report_env(.disable_tests=TRUE)
   .ReportEnv$report <- s3read(report_path)
   .ReportEnv$model <- do.call(s3read, as.list(report()$location$model))
 
@@ -201,13 +175,30 @@ get_element <- function(location){
 
 #' Create new, blank .ReportEnv
 #' @description Cleans the slate and creates a new reporting environment. 
+#' @param .disable_tests bool. Whether to run tests from syberiaReports.test
+#' directory. 
 #' @export
-make_report_env <- function(){
+make_report_env <- function(.disable_tests = FALSE){
   assign('.ReportEnv', new.env(), .GlobalEnv)
-  attach(.ReportEnv)
+  if(!any(search() %in% ".ReportEnv")){attach(.ReportEnv)}
   assign('report', list(), .ReportEnv)
+  
   assign('report_library', new.env(), .ReportEnv)
+  list.files(options()$syberiaReports.library, full.name=TRUE) %>% 
+    grep("\\.R$", ., value=TRUE) %>% 
+    sapply(function(x) source(x, local=.ReportEnv$report_library))
+  if(!any(search() %in% ".ReportEnv$report_library")){attach(.ReportEnv$report_library)}
+  
   assign('report_tests', new.env(), .ReportEnv)
+  list.files(options()$syberiaReports.test, full.name=TRUE) %>% 
+    grep("\\.R$", ., value=TRUE) %>%
+    sapply(function(x) source(x, local=.ReportEnv$report_tests))
+  
+  if(!.disable_tests){
+    cat("Running Tests. Hold on to 'ya butts... \n")
+    check_coverage()
+    perform_tests()
+  }
 }
 
 

@@ -4,7 +4,11 @@
 \alias{make_report_env}
 \title{Create new, blank .ReportEnv}
 \usage{
-make_report_env()
+make_report_env(.disable_tests = FALSE)
+}
+\arguments{
+\item{.disable_tests}{bool. Whether to run tests from syberiaReports.test
+directory.}
 }
 \description{
 Cleans the slate and creates a new reporting environment.
