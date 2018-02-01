@@ -61,14 +61,14 @@ list(
 
 # Internals
 
-## Environments and Saving. 
+## Environments and Saving
 
 A quick note on the inner-workings. The function `make_report_env` is responsible for establishing an environment named `.ReportEnv`, as well as several sub-environments. Everything relevant to the report is kept here, including the list that specifies how to construct the report, the individual functions, and the functions used for testing. Setting the options `syberiaReports.library` and `syberiaReports.tests` in your `.Rprofile` will determine where reporting functions and test functions are drawn from. 
 
-## Writing syberiaReports Functions. 
+## Writing syberiaReports Functions
 
 `syberiaReports` functions have some special requirements. First, every function must contain a parameter called `location`. The parameter takes in a string that represents where in the report the output of the function will be stored. E.g. `location = 'scores$auc'` writes the output to `report$scores$auc`. The function that actually takes a location and writes the output to that location is `add_element`, and every function should append results to the report object using it (although I suppose you you can parse it all manually if you really want to). 
 
-## Writing syberiaReports Tests.
+## Writing syberiaReports Tests
 
-`syberiaReports` tests also have some special requirements. First, they must be functions. Second, they must have the same name as the function they're testing. Third, errors must be raised via the `testthat::expect_` functions, otherwise error messages reported may not be helpful. 
+`syberiaReports` tests also have some special requirements. First, they must be functions. Second, they cannot have the same name as the function they're testing (doing so will likely cause some heavy recursion problems). Third, errors must be raised via the `testthat::expect_` functions, otherwise error messages reported may not be helpful. 

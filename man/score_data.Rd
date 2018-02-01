@@ -14,12 +14,6 @@ report$scored_data
 GLMNet handles 's' weird. You need to assign predict_method to model$input.
 You can't just pass it as an optional parameter to predict. So, if it exists
 we gotta handle it special.
-Okay, so I think what's going on is that when tundra containers create a 
-special id column they assign it to id_type, not over-assign id_var. So when
-custom fields exist we use id_type and when the defaults are used we use id
-var. So we choose from id_type where it exists and if not, id_var. 
-This is a bit obtuse, but some model munging produces a trivial, NA-filled
-dep_var, so this just kicks it out
 }
 \description{
 The main function for scoring data sets
