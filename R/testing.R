@@ -3,10 +3,10 @@
 #' @return NULL. Prints a message to the screen when functions are missing. 
 #' @export
 check_coverage <- function(){
-  functions <- options()$syberiaReports.library %>% 
+  functions <- settings$common$syberiaReports$library %>% 
     list.files(pattern = "\\.R")
   
-  tests <- options()$syberiaReports.test %>% 
+  tests <- settings$common$syberiaReports$tests %>% 
     list.files(pattern = "\\.R", full.name=TRUE) %>% 
     file.info %>% 
     .[.$size > 0,] %>%

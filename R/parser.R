@@ -13,14 +13,10 @@
 build_report <- function(report_path, .disable_tests=FALSE){
   #Messages
   library_error <- paste(
-    "Please specify a location for all syberiaReports functions via either the"
-    ,"library attribute of your report list, or"
-    ,"options('syberiaReports.library')"
+     "Please specify a location for all syberiaReports functions in your syberia.config file"
   )
   test_error <- paste(
-    "Please specify a location for all syberiaReports functions via either the"
-    ,"test attribute of your report list, or"
-    ,"options('syberiaReports.test')"
+     "Please specify a location for all syberiaReports tests in your syberia.config file"
   )
   
   #Create the report environment and object and append the basics
@@ -184,13 +180,13 @@ make_report_env <- function(.disable_tests = FALSE){
   assign('report', list(), .ReportEnv)
   
   assign('report_library', new.env(), .ReportEnv)
-  list.files(options()$syberiaReports.library, full.name=TRUE) %>% 
+  list.files(settings$common$syberiaReports$library, full.name=TRUE) %>% 
     grep("\\.R$", ., value=TRUE) %>% 
     sapply(function(x) source(x, local=.ReportEnv$report_library))
   if(!any(search() %in% ".ReportEnv$report_library")){attach(.ReportEnv$report_library)}
   
   assign('report_tests', new.env(), .ReportEnv)
-  list.files(options()$syberiaReports.test, full.name=TRUE) %>% 
+  list.files(settings$common$syberiaReports$test, full.name=TRUE) %>% 
     grep("\\.R$", ., value=TRUE) %>%
     sapply(function(x) source(x, local=.ReportEnv$report_tests))
   
