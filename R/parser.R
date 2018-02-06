@@ -8,7 +8,7 @@
 #' after execution, even if a particular function fails.
 #' @export
 #' @examples build_report('path/to/my/file.R')
-build_report <- function(report_path, .disable_tests=FALSE){
+build_report <- function(report_path, .disable_tests = FALSE){
   #Messages
   library_error <- paste(
      "Please specify a location for all syberiaReports functions in your syberia.config file"
@@ -28,14 +28,14 @@ build_report <- function(report_path, .disable_tests=FALSE){
   syberiaReports::add_element(syberiaReports::recipe()$model, 'location$model')
   syberiaReports::add_element(syberiaReports::model()$output$model, 'model')
   syberiaReports::add_element(syberiaReports::recipe()$raw_data, 'raw_data')
-  syberiaReports::add_element(syberiaReports::library(), '.env$library')
+  syberiaReports::add_element(syberiaReports::lib(), '.env$library')
   syberiaReports::add_element(syberiaReports::tests(), '.env$tests')
   syberiaReports::add_element(syberiaReports::recipe(), '.env$recipe')
 
   #Score all the listed data sets.
   cat('Scoring the data sets\n')
   sapply(names(syberiaReports::recipe()$scored_data), score_data) %>% 
-    syberiaReports::add_element('scored_data')
+    {syberiaReports::add_element(., 'scored_data')}
 
   #Evaluate each of the reporting functions.
   cat('Running reporting functions\n')

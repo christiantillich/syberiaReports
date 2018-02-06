@@ -4,6 +4,11 @@
 #' directory. 
 #' @export
 make_report_env <- function(.disable_tests = FALSE){
+  if (exists(".syberiaReport")){
+    detach('.syberiaReport$library')
+    detach('.syberiaReport')
+    base::rm(list = ls(.syberiaReport), envir = .syberiaReport)
+  }
   assign('.syberiaReport', new.env(), .GlobalEnv)
   if(!any(search() %in% ".syberiaReport")){attach(.syberiaReport)}
   assign('report', list(), .syberiaReport)
@@ -23,6 +28,7 @@ make_report_env <- function(.disable_tests = FALSE){
     cat("Running Tests. Hold on to 'ya butts... \n")
     check_coverage()
     perform_tests()
+    make_report_env(.disable_tests = TRUE)
   }
 }
 
@@ -79,7 +85,7 @@ model <- function(){.syberiaReport$model}
 #' reporting functions
 #' @return
 #' @export
-library <- function(){.syberiaReport$library}
+lib <- function(){.syberiaReport$library}
 
 #' Helper to call the test environment from .syberiaReport, with all the
 #' reporting functions
