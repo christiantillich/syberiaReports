@@ -34,6 +34,6 @@ perform_tests <- function(){
       paste(collapse='\n\t') %>% 
       warning(.,'\n')
   }
-  errors <- .ReportEnv$report_tests %>% 
+  errors <- .syberiaReport$tests %>% 
     sapply(function(x) {tryCatch(x(), error = error_func)})
 }

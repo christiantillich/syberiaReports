@@ -1,5 +1,3 @@
-
-
 #' Build the report list.
 #' @description Specify the path to the file containing the report list.
 #' Build_report reads the list, turns it into your report object, and uploads it
@@ -20,23 +18,24 @@ build_report <- function(report_path, .disable_tests=FALSE){
   )
   
   #Create the report environment and object and append the basics
-  make_report_env(.disable_tests)
-  .ReportEnv$report_list <- source(report_path)$value
-  .ReportEnv$model <- do.call(s3read, as.list(report_list()$model))
+  syberiaReports::make_report_env(.disable_tests)
+  .syberiaReport$recipe <- source(report_path)$value
+  .syberiaReport$model <- do.call(s3read, as.list(recipe()$model))
   
   #Build out the core report properties
   cat('Initializing Report\n')
-  add_element(report_list()$save, 'location$report')
-  add_element(report_list()$model, 'location$model')
-  add_element(model()$output$model, 'model')
-  add_element(report_list()$raw_data, 'raw_data')
-  add_element(report_library(), '.env$library')
-  add_element(report_tests(), '.env$tests')
-  add_element(report_list(), '.env$list')
+  syberiaReports::add_element(syberiaReports::recipe()$save, 'location$report')
+  syberiaReports::add_element(syberiaReports::recipe()$model, 'location$model')
+  syberiaReports::add_element(syberiaReports::model()$output$model, 'model')
+  syberiaReports::add_element(syberiaReports::recipe()$raw_data, 'raw_data')
+  syberiaReports::add_element(syberiaReports::library(), '.env$library')
+  syberiaReports::add_element(syberiaReports::tests(), '.env$tests')
+  syberiaReports::add_element(syberiaReports::recipe(), '.env$recipe')
 
   #Score all the listed data sets.
   cat('Scoring the data sets\n')
-  sapply(names(report_list()$scored_data), score_data) %>% add_element('scored_data')
+  sapply(names(syberiaReports::recipe()$scored_data), score_data) %>% 
+    syberiaReports::add_element('scored_data')
 
   #Evaluate each of the reporting functions.
   cat('Running reporting functions\n')
@@ -44,11 +43,11 @@ build_report <- function(report_path, .disable_tests=FALSE){
     cat(names(element))
     do.call(element[[1]], element[-1])
   }
-  dummy <- report_list()$report %>% lapply(report_on)
+  dummy <- syberiaReports::recipe()$report %>% lapply(report_on)
 
   #Save the report
-  cat(paste('Writing out report to', report_list()$save,'\n'))
-  s3store(report(), report_list()$save)
+  cat(paste('Writing out report to', syberiaReports::recipe()$save,'\n'))
+  s3store(syberiaReports::report(), syberiaReports::recipe()$save)
 }
 
 
@@ -59,14 +58,14 @@ build_report <- function(report_path, .disable_tests=FALSE){
 score_data <- function(data_name){
 
   #Set up the default options
-  options <- unlist(report_list()$scored_data[[data_name]][-1], recursive=F)
+  options <- unlist(syberiaReports::recipe()$scored_data[[data_name]][-1], recursive=F)
   if(is.null(options$filters)){options$filters <- list('TRUE')}
   if(is.null(options$id_name)){
-    options$id_name <- model()$input[c('id_type','id_var')] %>% 
+    options$id_name <- syberiaReports::model()$input[c('id_type','id_var')] %>% 
       unlist %>% unique %>% .[1]
   }
   if(!is.null(options$predict_method)){
-    model()$input$predict_method <- options$predict_method
+    syberiaReports::model()$input$predict_method <- options$predict_method
   }
   if(is.null(options$dep_var_name)){options$dep_var_name <- 'dep_var'}
   #' GLMNet handles 's' weird. You need to assign predict_method to model$input.
@@ -74,37 +73,27 @@ score_data <- function(data_name){
   #' we gotta handle it special.
   
   #Read in the data
-  data <- s3read(report_list()$scored_data[[data_name]][[1]]) %>%
+  data <- s3read(syberiaReports::recipe()$scored_data[[data_name]][[1]]) %>%
     {do.call(function(x, ...) filter_(., ...), options$filters)}
   if(is.null(data[[options$id_name]])){
     stop(paste("The column",options$id_name,"doesn't exist. Please set id_name manually."))
   }
 
   #Compose the data set. 
-  post_munged <- model()$munge(data) %>% {.[,!(colnames(.) %in% options$dep_var_name)]}
-  data$score <- model()$predict(data, options)
+  post_munged <- syberiaReports::model()$munge(data) %>% 
+    {.[,!(colnames(.) %in% options$dep_var_name)]}
+  data$score <- syberiaReports::model()$predict(data, options)
   out <- left_join(data[,c(options$id_name, options$dep_var_name,'score')], post_munged)
   colnames(out)[colnames(out) == options$dep_var_name] <- 'dep_var'
 
   #Write
-  path <- paste0(report_list()$save, '/', data_name)
+  path <- paste0(syberiaReports::recipe()$save, '/', data_name)
   s3store(out, path)
 
   #Return the path
   return(path)
 }
 
-
-#' Get the s3 link to a set by using the report_list name.
-#' @description Gets a data set from the report_list section you specify. 
-#' @param name The name of the data set.
-#' @param list Optional param to specify whether you want to use the scored data
-#' list or the raw data list. Defaults to scored data.
-#' @return The s3link to the data set.
-#' @export
-get_set <- function(name, list="scored_data"){
-  sapply(name, function(x) report()[[list]][[x]][[1]])
-}
 
 #' Write out a plot to s3
 #' @description. Really just a wrapper around s3_plot, but helps by managing the
@@ -115,7 +104,11 @@ get_set <- function(name, list="scored_data"){
 #' @return Returns the s3 path to the plot
 #' @export
 store_plot <- function(plot_obj,name,opts=list()){
-  s3_plot(paste0(report()$location$report,'/',name), plot(plot_obj),opts)
+  s3_plot(
+    paste0(syberiaReports::report()$location$report,'/',name), 
+    plot(plot_obj),
+    opts
+  )
 }
 
 #' Add something to your report.
@@ -131,16 +124,16 @@ store_plot <- function(plot_obj,name,opts=list()){
 append_report <- function(report_path, func_list){
 
   #Read in report
-  make_report_env(.disable_tests=TRUE)
-  .ReportEnv$report <- s3read(report_path)
-  .ReportEnv$model <- do.call(s3read, as.list(report()$location$model))
+  syberiaReports::make_report_env(.disable_tests=TRUE)
+  .syberiaReport$report <- s3read(report_path)
+  .syberiaReport$model <- do.call(s3read, as.list(syberiaReports::report()$location$model))
 
   #Evaluate each of the reporting functions.
   report_on <- function(element) do.call(element[[1]], element[-1])
   lapply(func_list, report_on)
 
   #Write out
-  s3store(report(), report()$location$report)
+  s3store(syberiaReports::report(), syberiaReports::report()$location$report)
 }
 
 
@@ -155,53 +148,10 @@ append_report <- function(report_path, func_list){
 #' to be stored in, as a text string. 
 #' @export
 add_element <- function(item, location){
-  .ReportEnv$temp <- item
-  eval(parse(text=paste0('report$',location,' <- temp')) ,envir=.ReportEnv)
-}
-
-#' Retrieves object via a text path. 
-#' @description Works like add_element(), but retrieves the object at the 
-#' specified text path. 
-#' @param location character. The location in the report you'd like to retrieve
-#' an object from. 
-#' @export
-get_element <- function(location){
-  eval(parse(text=paste0('report$',location)) ,envir=.ReportEnv)
-}
-
-#' Create new, blank .ReportEnv
-#' @description Cleans the slate and creates a new reporting environment. 
-#' @param .disable_tests bool. Whether to run tests from syberiaReports.test
-#' directory. 
-#' @export
-make_report_env <- function(.disable_tests = FALSE){
-  assign('.ReportEnv', new.env(), .GlobalEnv)
-  if(!any(search() %in% ".ReportEnv")){attach(.ReportEnv)}
-  assign('report', list(), .ReportEnv)
-  
-  assign('report_library', new.env(), .ReportEnv)
-  list.files(settings$common$syberiaReports$library, full.name=TRUE) %>% 
-    grep("\\.R$", ., value=TRUE) %>% 
-    sapply(function(x) source(x, local=.ReportEnv$report_library))
-  if(!any(search() %in% ".ReportEnv$report_library")){attach(.ReportEnv$report_library)}
-  
-  assign('report_tests', new.env(), .ReportEnv)
-  list.files(settings$common$syberiaReports$test, full.name=TRUE) %>% 
-    grep("\\.R$", ., value=TRUE) %>%
-    sapply(function(x) source(x, local=.ReportEnv$report_tests))
-  
-  if(!.disable_tests){
-    cat("Running Tests. Hold on to 'ya butts... \n")
-    check_coverage()
-    perform_tests()
-  }
+  .syberiaReport$temp <- item
+  eval(parse(text=paste0('report$',location,' <- temp')) ,envir=.syberiaReport)
 }
 
 
-#Useful internal helper functions, don't document or export. 
-report <- function(){.ReportEnv$report}
-report_list <- function(){.ReportEnv$report_list}
-model <- function(){.ReportEnv$model}
-report_library <- function(){.ReportEnv$report_library}
-report_tests <- function(){.ReportEnv$report_tests}
+
 
