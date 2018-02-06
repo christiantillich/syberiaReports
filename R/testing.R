@@ -1,15 +1,13 @@
 #' Check that all reporting functions have a non-trivial test. 
-#'
 #' @return NULL. Prints a message to the screen when functions are missing. 
 #' @export
 check_coverage <- function(){
   
-  #' I have to do it by file names, not function names, because the test 
-  #' functions won't be able to hold the same name as the function they're
-  #' testing. 
   functions <- settings$common$syberiaReports$library %>% 
     list.files(pattern = "\\.R")
-  
+    # I have to do it by file names, not function names, because the test 
+    # functions won't be able to hold the same name as the function they're
+    # testing. 
   tests <- settings$common$syberiaReports$tests %>% 
     list.files(pattern = "\\.R", full.name=TRUE) %>% 
     file.info %>% 

@@ -2,7 +2,7 @@
 #' @description Cleans the slate and creates a new reporting environment. 
 #' @param .disable_tests bool. Whether to run tests from syberiaReports.test
 #' directory. 
-#' @export
+#' @export 
 make_report_env <- function(.disable_tests = FALSE){
   if (exists(".syberiaReport")){
     detach('.syberiaReport$library')
@@ -67,28 +67,28 @@ combine_sets <- function(sets, list = "scored_data"){
 }
 
 #' Helper to call the report object from .syberiaReport
-#' @return
+#' @return .syberiaReport$report
 #' @export
 report <- function(){.syberiaReport$report}
 
 #' Helper to call the report recipe from .syberiaReport
-#' @return
+#' @return .syberiaReport$recipe
 #' @export
 recipe <- function(){.syberiaReport$recipe}
 
 #' Helper to call the model from .syberiaReport
-#' @return
+#' @return .syberiaReport$model
 #' @export
 model <- function(){.syberiaReport$model}
 
 #' Helper to call the library environment from .syberiaReport, with all the
 #' reporting functions
-#' @return
+#' @return .syberiaReport$library
 #' @export
 lib <- function(){.syberiaReport$library}
 
 #' Helper to call the test environment from .syberiaReport, with all the
 #' reporting functions
-#' @return
+#' @return .syberiaReport$tests
 #' @export
 tests <- function(){.syberiaReport$tests}
