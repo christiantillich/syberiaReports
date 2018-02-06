@@ -3,10 +3,14 @@
 #' @return NULL. Prints a message to the screen when functions are missing. 
 #' @export
 check_coverage <- function(){
-  functions <- options()$syberiaReports.library %>% 
+  
+  #' I have to do it by file names, not function names, because the test 
+  #' functions won't be able to hold the same name as the function they're
+  #' testing. 
+  functions <- settings$common$syberiaReports$library %>% 
     list.files(pattern = "\\.R")
   
-  tests <- options()$syberiaReports.test %>% 
+  tests <- settings$common$syberiaReports$tests %>% 
     list.files(pattern = "\\.R", full.name=TRUE) %>% 
     file.info %>% 
     .[.$size > 0,] %>%
@@ -34,6 +38,6 @@ perform_tests <- function(){
       paste(collapse='\n\t') %>% 
       warning(.,'\n')
   }
-  errors <- .ReportEnv$report_tests %>% 
+  errors <- syberiaReports::tests() %>% 
     sapply(function(x) {tryCatch(x(), error = error_func)})
 }
