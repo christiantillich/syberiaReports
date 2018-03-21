@@ -83,7 +83,10 @@ score_data <- function(data_name){
   post_munged <- syberiaReports::model()$munge(data) %>% 
     {.[,!(colnames(.) %in% options$dep_var_name)]}
   data$score <- syberiaReports::model()$predict(data, options)
-  out <- left_join(data[,c(options$id_name, options$dep_var_name,'score')], post_munged)
+  out <- tryCatch(
+     left_join(data[,c(options$id_name, options$dep_var_name,'score')], post_munged)
+    ,error = function(e) {cbind(data[,c(options$id_name, options$dep_var_name,'score')], post_munged)}
+  )
   colnames(out)[colnames(out) == options$dep_var_name] <- 'dep_var'
 
   #Write
