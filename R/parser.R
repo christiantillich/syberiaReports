@@ -87,7 +87,7 @@ score_data <- function(data_name){
   #Compose the data set. 
   post_munged <- syberiaReports::model()$munge(data) %>% 
     {.[,!(colnames(.) %in% options$dep_var_name)]}
-  data$score <- syberiaReports::model()$predict(data, options)
+  data[,options$scores] <- syberiaReports::model()$predict(data, options)
   if(options$dep_var_name != FALSE){
     out <- left_join(data[,c(options$id_name, options$dep_var_name, options$scores)], post_munged)
     colnames(out)[colnames(out) == options$dep_var_name] <- options$dep_var_name
