@@ -64,6 +64,7 @@ score_data <- function(data_name){
     options$id_name <- syberiaReports::model()$input[c('id_type','id_var')] %>% 
       unlist %>% unique %>% .[1]
   }
+  if(is.null(options$scores)){options$scores <- 'score'}
   if(!is.null(options$predict_method)){
     syberiaReports::model()$input$predict_method <- options$predict_method
   }
@@ -78,16 +79,28 @@ score_data <- function(data_name){
   if(is.null(data[[options$id_name]])){
     stop(paste("The column",options$id_name,"doesn't exist. Please set id_name manually."))
   }
+  if(options$dep_var_name != FALSE){ 
+    if(is.null(data[[options$dep_var_name]])){
+      stop(paste("The column",options$dep_var_name,"doesn't exist. Please set dep_var manually."))
+  }}
 
   #Compose the data set. 
   post_munged <- syberiaReports::model()$munge(data) %>% 
     {.[,!(colnames(.) %in% options$dep_var_name)]}
-  data$score <- syberiaReports::model()$predict(data, options)
-  out <- tryCatch(
-     left_join(data[,c(options$id_name, options$dep_var_name,'score')], post_munged)
-    ,error = function(e) {cbind(data[,c(options$id_name, options$dep_var_name,'score')], post_munged)}
-  )
-  colnames(out)[colnames(out) == options$dep_var_name] <- 'dep_var'
+  
+  data[,options$scores] <- syberiaReports::model()$predict(data, options)
+  if(options$dep_var_name != FALSE){
+    out <- tryCatch(
+       left_join(data[,c(options$id_name, options$dep_var_name, options$scores)], post_munged)
+      ,error = function(e) {cbind(data[,c(options$id_name, options$dep_var_name, options$scores)], post_munged)}
+    )
+    colnames(out)[colnames(out) == options$dep_var_name] <- options$dep_var_name
+  } else {
+    out <- tryCatch(
+       left_join(data[,c(options$id_name, options$scores)], post_munged)
+      ,error = function(e) {cbind(data[,c(options$id_name, options$scores)], post_munged)}
+    )
+  }
 
   #Write
   path <- paste0(syberiaReports::recipe()$save, '/', data_name)
