@@ -8,7 +8,7 @@
 #' after execution, even if a particular function fails.
 #' @export
 #' @examples build_report('path/to/my/file.R')
-build_report <- function(report_path, .disable_tests = FALSE){
+build_report <- function(report_path, args = list(), .disable_tests = FALSE){
   #Messages
   library_error <- paste(
      "Please specify a location for all syberiaReports functions in your syberia.config file"
@@ -19,7 +19,7 @@ build_report <- function(report_path, .disable_tests = FALSE){
   
   #Create the report environment and object and append the basics
   syberiaReports::make_report_env(.disable_tests)
-  .syberiaReport$recipe <- source(report_path)$value
+  .syberiaReport$recipe <- source(report_path, local = TRUE)$value
   .syberiaReport$model <- do.call(s3read, as.list(recipe()$model))
   
   #Build out the core report properties
@@ -119,10 +119,10 @@ score_data <- function(data_name){
 #' @param opts Optional parameters to pass as a list to s3_plot
 #' @return Returns the s3 path to the plot
 #' @export
-store_plot <- function(plot_obj,name,opts=list()){
+store_plot <- function(plot_obj,name,plot_func = plot,opts=list()){
   s3_plot(
     paste0(syberiaReports::report()$location$report,'/',name), 
-    plot(plot_obj),
+    plot_func(plot_obj),
     opts
   )
 }
