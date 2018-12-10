@@ -4,7 +4,7 @@
 \alias{store_plot}
 \title{Write out a plot to s3}
 \usage{
-store_plot(plot_obj, name, opts = list())
+store_plot(plot_obj, name, plot_func = plot, opts = list())
 }
 \arguments{
 \item{plot_obj}{The output from a plot function like ggplot() or plot()}
